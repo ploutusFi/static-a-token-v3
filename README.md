@@ -107,6 +107,19 @@ npm run verify:ploutos:mainnet
 npm run deploy:ploutos:mainnet:auto-verify
 ```
 
+To enable Etherscan `Read as Proxy` / `Write as Proxy` tabs for all deployed proxies:
+
+```sh
+make verify-ploutos-mainnet-proxy-tabs
+npm run verify:ploutos:mainnet:proxy-tabs
+```
+
+Generic (for another network) using the same script:
+
+```sh
+CHAIN=arbitrum CHAIN_ID=42161 RPC_URL=arbitrum FACTORY_PROXY=<factory_proxy_address> bash scripts/etherscan-verify-proxies.sh
+```
+
 If some static token proxies appear as `Similar Match`, run targeted re-verification:
 
 ```sh

@@ -13,9 +13,11 @@
     "deploy:ploutos:mainnet": "bash scripts/deploy-ploutos-mainnet.sh broadcast",
     "verify:ploutos:mainnet:dry-run": "bash scripts/verify-ploutos-mainnet.sh --dry-run",
     "verify:ploutos:mainnet": "bash scripts/verify-ploutos-mainnet.sh",
+    "verify:ploutos:mainnet:proxy-tabs:dry-run": "CHAIN=mainnet CHAIN_ID=1 bash scripts/etherscan-verify-proxies.sh --dry-run",
+    "verify:ploutos:mainnet:proxy-tabs": "CHAIN=mainnet CHAIN_ID=1 bash scripts/etherscan-verify-proxies.sh",
     "reverify:ploutos:mainnet:stata-proxies:dry-run": "bash scripts/reverify-stata-proxies-mainnet.sh --dry-run",
     "reverify:ploutos:mainnet:stata-proxies": "bash scripts/reverify-stata-proxies-mainnet.sh",
-    "deploy:ploutos:mainnet:auto-verify": "npm run deploy:ploutos:mainnet && npm run verify:ploutos:mainnet"
+    "deploy:ploutos:mainnet:auto-verify": "npm run deploy:ploutos:mainnet && npm run verify:ploutos:mainnet && npm run verify:ploutos:mainnet:proxy-tabs"
   },
   "repository": {
     "type": "git",

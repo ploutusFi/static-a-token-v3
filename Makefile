@@ -19,9 +19,11 @@ deploy-ploutos-mainnet :; forge script scripts/Deploy.s.sol:DeployMainnet --rpc-
 deploy-ploutos-mainnet-upgrade :; forge script scripts/DeployUpgrade.s.sol:DeployMainnet --rpc-url mainnet --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
 verify-ploutos-mainnet-dry-run :; bash scripts/verify-ploutos-mainnet.sh --dry-run
 verify-ploutos-mainnet :; bash scripts/verify-ploutos-mainnet.sh
+verify-ploutos-mainnet-proxy-tabs-dry-run :; CHAIN=mainnet CHAIN_ID=1 bash scripts/etherscan-verify-proxies.sh --dry-run
+verify-ploutos-mainnet-proxy-tabs :; CHAIN=mainnet CHAIN_ID=1 bash scripts/etherscan-verify-proxies.sh
 reverify-ploutos-mainnet-stata-proxies-dry-run :; bash scripts/reverify-stata-proxies-mainnet.sh --dry-run
 reverify-ploutos-mainnet-stata-proxies :; bash scripts/reverify-stata-proxies-mainnet.sh
-deploy-ploutos-mainnet-auto-verify :; $(MAKE) deploy-ploutos-mainnet && $(MAKE) verify-ploutos-mainnet
+deploy-ploutos-mainnet-auto-verify :; $(MAKE) deploy-ploutos-mainnet && $(MAKE) verify-ploutos-mainnet && $(MAKE) verify-ploutos-mainnet-proxy-tabs
 
 # Utilities
 download :; cast etherscan-source --chain ${chain} -d src/etherscan/${chain}_${address} ${address}
