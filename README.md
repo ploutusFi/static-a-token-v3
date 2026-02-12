@@ -127,6 +127,50 @@ make reverify-ploutos-mainnet-stata-proxies
 npm run reverify:ploutos:mainnet:stata-proxies
 ```
 
+### Ploutos Hemi Mainnet Deployment
+
+`scripts/config/PloutosHemiConfig.sol` is the source of truth for Hemi:
+
+- `CHAIN_ID`: `43111`
+- `POOL`: `0xDdc98fF53945e334Ecca339b4DD8847b3769e8f0`
+- `INCENTIVES_CONTROLLER`: `0x14D64D857EBDb2B4C51d5c83452cb624Acc47c2E`
+- `PROXY_ADMIN_OWNER`: `0xfb33205d32ca482a4d428c23181a9665d4ec02cc`
+
+Dry-run and deploy:
+
+```sh
+make deploy-ploutos-hemi dry=1
+make deploy-ploutos-hemi
+```
+
+Contract verification (implementation + proxies):
+
+```sh
+make verify-ploutos-hemi
+make verify-ploutos-hemi-proxy-tabs
+make reverify-ploutos-hemi-stata-proxies
+```
+
+One-shot deploy + full auto verification:
+
+```sh
+make deploy-ploutos-hemi-auto-verify
+```
+
+NPM alternatives:
+
+```sh
+npm run deploy:ploutos:hemi:dry-run
+npm run deploy:ploutos:hemi
+npm run verify:ploutos:hemi
+npm run verify:ploutos:hemi:proxy-tabs
+npm run reverify:ploutos:hemi:stata-proxies
+npm run deploy:ploutos:hemi:auto-verify
+```
+
+Hemi explorer verification uses `https://explorer.hemi.xyz/api` from `foundry.toml`.
+Set `ETHERSCAN_API_KEY_HEMI` in `.env` (placeholder values like `abc` are accepted by Hemi explorer flows).
+
 ### Ploutos Ethereum Mainnet Upgrade Payload
 
 For upgrade payload deployment, set `PLOUTOS_STATIC_A_TOKEN_FACTORY` in `.env`, then run:

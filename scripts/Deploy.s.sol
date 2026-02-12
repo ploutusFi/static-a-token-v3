@@ -14,6 +14,7 @@ import {IERC20Metadata} from 'solidity-utils/contracts/oz-common/interfaces/IERC
 import {StaticATokenFactory} from '../src/StaticATokenFactory.sol';
 import {StaticATokenLM} from '../src/StaticATokenLM.sol';
 import {PloutosMainnetConfig} from './config/PloutosMainnetConfig.sol';
+import {PloutosHemiConfig} from './config/PloutosHemiConfig.sol';
 
 library DeployATokenFactory {
   struct DeploymentResult {
@@ -204,6 +205,92 @@ library DeployATokenFactory {
       console2.log('  staticAToken', staticAToken);
     }
   }
+
+  function deployPloutosHemi(
+    address proxyAdminOwner
+  ) internal returns (DeploymentResult memory result) {
+    if (block.chainid != PloutosHemiConfig.CHAIN_ID) {
+      revert('CHAIN_ID_MISMATCH');
+    }
+
+    IPool pool = IPool(PloutosHemiConfig.POOL);
+    IRewardsController rewardsController = IRewardsController(
+      PloutosHemiConfig.INCENTIVES_CONTROLLER
+    );
+    address[] memory reserves = pool.getReservesList();
+
+    console2.log('Deploy config');
+    console2.log('  Chain ID', block.chainid);
+    console2.log('  Pool', address(pool));
+    console2.log('  Incentives', address(rewardsController));
+    console2.log('  ProxyAdmin owner', proxyAdminOwner);
+    console2.log('  Reserves count', reserves.length);
+
+    console2.log('Step 1/6: Deploy TransparentProxyFactory');
+    TransparentProxyFactory proxyFactory = new TransparentProxyFactory();
+    result.transparentProxyFactory = address(proxyFactory);
+    console2.log('  TransparentProxyFactory', result.transparentProxyFactory);
+
+    console2.log('Step 2/6: Create ProxyAdmin');
+    result.proxyAdmin = proxyFactory.createProxyAdmin(proxyAdminOwner);
+    console2.log('  ProxyAdmin', result.proxyAdmin);
+    console2.log('  ProxyAdmin owner (on-chain)', ProxyAdmin(result.proxyAdmin).owner());
+
+    console2.log('Step 3/6: Deploy StaticATokenLM implementation');
+    StaticATokenLM staticImpl = new StaticATokenLM(pool, rewardsController);
+    result.staticATokenImpl = address(staticImpl);
+    console2.log('  StaticATokenLM implementation', result.staticATokenImpl);
+
+    console2.log('Step 4/6: Deploy StaticATokenFactory implementation');
+    StaticATokenFactory factoryImpl = new StaticATokenFactory(
+      pool,
+      result.proxyAdmin,
+      ITransparentProxyFactory(result.transparentProxyFactory),
+      result.staticATokenImpl
+    );
+    result.staticATokenFactoryImpl = address(factoryImpl);
+    console2.log('  StaticATokenFactory implementation', result.staticATokenFactoryImpl);
+
+    console2.log('Step 5/6: Deploy StaticATokenFactory proxy');
+    StaticATokenFactory factory = StaticATokenFactory(
+      ITransparentProxyFactory(result.transparentProxyFactory).create(
+        result.staticATokenFactoryImpl,
+        result.proxyAdmin,
+        abi.encodeWithSelector(StaticATokenFactory.initialize.selector)
+      )
+    );
+    result.staticATokenFactoryProxy = address(factory);
+    console2.log('  StaticATokenFactory proxy', result.staticATokenFactoryProxy);
+
+    result.staticATokenFactoryProxyImplementation = ProxyAdmin(result.proxyAdmin)
+      .getProxyImplementation(
+        TransparentUpgradeableProxy(payable(result.staticATokenFactoryProxy))
+      );
+    console2.log(
+      '  StaticATokenFactory proxy impl (read via ProxyAdmin)',
+      result.staticATokenFactoryProxyImplementation
+    );
+
+    console2.log('Step 6/6: createStaticATokens(pool.getReservesList())');
+    _logReservePlan(
+      pool,
+      ITransparentProxyFactory(result.transparentProxyFactory),
+      result.staticATokenImpl,
+      result.proxyAdmin,
+      reserves
+    );
+    factory.createStaticATokens(reserves);
+    result.staticATokenCount = factory.getStaticATokens().length;
+    console2.log('createStaticATokens completed');
+    console2.log('  Total staticATokens in factory', result.staticATokenCount);
+    for (uint256 i = 0; i < reserves.length; i++) {
+      string memory underlyingSymbol = _readSymbol(reserves[i]);
+      address staticAToken = factory.getStaticAToken(reserves[i]);
+      console2.log('  underlying', reserves[i]);
+      console2.log('  underlying symbol', underlyingSymbol);
+      console2.log('  staticAToken', staticAToken);
+    }
+  }
 }
 
 contract DeployMainnet is Script {
@@ -219,6 +306,32 @@ contract DeployMainnet is Script {
     vm.stopBroadcast();
 
     console2.log('Ploutos Ethereum Mainnet deployment completed');
+    console2.log('TRANSPARENT_PROXY_FACTORY', result.transparentProxyFactory);
+    console2.log('PROXY_ADMIN', result.proxyAdmin);
+    console2.log('STATIC_A_TOKEN_IMPL', result.staticATokenImpl);
+    console2.log('STATIC_A_TOKEN_FACTORY_IMPL', result.staticATokenFactoryImpl);
+    console2.log('STATIC_A_TOKEN_FACTORY_PROXY', result.staticATokenFactoryProxy);
+    console2.log(
+      'STATIC_A_TOKEN_FACTORY_PROXY_IMPL',
+      result.staticATokenFactoryProxyImplementation
+    );
+    console2.log('STATIC_A_TOKEN_COUNT', result.staticATokenCount);
+  }
+}
+
+contract DeployHemi is Script {
+  error ChainIdMismatch(uint256 expected, uint256 actual);
+
+  function run() external returns (DeployATokenFactory.DeploymentResult memory result) {
+    if (block.chainid != PloutosHemiConfig.CHAIN_ID) {
+      revert ChainIdMismatch(PloutosHemiConfig.CHAIN_ID, block.chainid);
+    }
+
+    vm.startBroadcast();
+    result = DeployATokenFactory.deployPloutosHemi(PloutosHemiConfig.PROXY_ADMIN_OWNER);
+    vm.stopBroadcast();
+
+    console2.log('Ploutos Hemi Mainnet deployment completed');
     console2.log('TRANSPARENT_PROXY_FACTORY', result.transparentProxyFactory);
     console2.log('PROXY_ADMIN', result.proxyAdmin);
     console2.log('STATIC_A_TOKEN_IMPL', result.staticATokenImpl);

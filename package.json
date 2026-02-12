@@ -17,7 +17,16 @@
     "verify:ploutos:mainnet:proxy-tabs": "CHAIN=mainnet CHAIN_ID=1 bash scripts/etherscan-verify-proxies.sh",
     "reverify:ploutos:mainnet:stata-proxies:dry-run": "bash scripts/reverify-stata-proxies-mainnet.sh --dry-run",
     "reverify:ploutos:mainnet:stata-proxies": "bash scripts/reverify-stata-proxies-mainnet.sh",
-    "deploy:ploutos:mainnet:auto-verify": "npm run deploy:ploutos:mainnet && npm run verify:ploutos:mainnet && npm run verify:ploutos:mainnet:proxy-tabs"
+    "deploy:ploutos:mainnet:auto-verify": "npm run deploy:ploutos:mainnet && npm run verify:ploutos:mainnet && npm run verify:ploutos:mainnet:proxy-tabs",
+    "deploy:ploutos:hemi:dry-run": "bash scripts/deploy-ploutos-hemi.sh dry-run",
+    "deploy:ploutos:hemi": "bash scripts/deploy-ploutos-hemi.sh broadcast",
+    "verify:ploutos:hemi:dry-run": "bash scripts/verify-ploutos-hemi.sh --dry-run",
+    "verify:ploutos:hemi": "bash scripts/verify-ploutos-hemi.sh",
+    "verify:ploutos:hemi:proxy-tabs:dry-run": "CHAIN=hemi CHAIN_ID=43111 RPC_URL=hemi bash scripts/etherscan-verify-proxies.sh --dry-run",
+    "verify:ploutos:hemi:proxy-tabs": "CHAIN=hemi CHAIN_ID=43111 RPC_URL=hemi bash scripts/etherscan-verify-proxies.sh",
+    "reverify:ploutos:hemi:stata-proxies:dry-run": "bash scripts/reverify-stata-proxies-hemi.sh --dry-run",
+    "reverify:ploutos:hemi:stata-proxies": "bash scripts/reverify-stata-proxies-hemi.sh",
+    "deploy:ploutos:hemi:auto-verify": "npm run deploy:ploutos:hemi && npm run verify:ploutos:hemi && npm run verify:ploutos:hemi:proxy-tabs"
   },
   "repository": {
     "type": "git",

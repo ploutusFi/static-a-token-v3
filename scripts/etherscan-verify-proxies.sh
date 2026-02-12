@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CHAIN="${CHAIN:-mainnet}"
+TARGET_CHAIN="${CHAIN:-mainnet}"
 CHAIN_ID="${CHAIN_ID:-}"
-RPC_URL="${RPC_URL:-$CHAIN}"
+RPC_URL="${RPC_URL:-$TARGET_CHAIN}"
 FACTORY_PROXY="${FACTORY_PROXY:-${PLOUTOS_STATIC_A_TOKEN_FACTORY:-}}"
 BROADCAST_FILE="${BROADCAST_FILE:-broadcast/Deploy.s.sol/1/run-latest.json}"
 INCLUDE_FACTORY_PROXY="${INCLUDE_FACTORY_PROXY:-1}"
 POLL_ATTEMPTS="${POLL_ATTEMPTS:-20}"
 POLL_SLEEP_SECONDS="${POLL_SLEEP_SECONDS:-3}"
+ETHERSCAN_API_BASE_URL="${ETHERSCAN_API_BASE_URL:-}"
 DRY_RUN=0
 
 # EIP-1967 implementation slot
@@ -70,6 +71,7 @@ resolve_chain_id() {
     1088|metis) echo "1088" ;;
     1101|zkevm|polygonzkevm) echo "1101" ;;
     250|fantom|ftm) echo "250" ;;
+    43111|hemi|hemi-mainnet) echo "43111" ;;
     *)
       if [[ "$1" =~ ^[0-9]+$ ]]; then
         echo "$1"
@@ -99,7 +101,24 @@ resolve_api_key() {
     100) echo "${ETHERSCAN_API_KEY_GNOSIS:-}" ;;
     1101) echo "${ETHERSCAN_API_KEY_ZKEVM:-}" ;;
     250) echo "${ETHERSCAN_API_KEY_FANTOM:-}" ;;
+    43111) echo "${ETHERSCAN_API_KEY_HEMI:-abc}" ;;
     *) echo "" ;;
+  esac
+}
+
+resolve_api_base() {
+  local chain_id="$1"
+  case "$chain_id" in
+    43111) echo "https://explorer.hemi.xyz/api" ;;
+    *) echo "https://api.etherscan.io/v2/api" ;;
+  esac
+}
+
+requires_chainid_param() {
+  local chain_id="$1"
+  case "$chain_id" in
+    43111) echo "0" ;;
+    *) echo "1" ;;
   esac
 }
 
@@ -135,15 +154,21 @@ submit_verify_proxy() {
     return 0
   fi
 
-  output="$(
-    curl -s --request POST --url https://api.etherscan.io/v2/api \
-      --data-urlencode "chainid=$CHAIN_ID" \
-      --data-urlencode "module=contract" \
-      --data-urlencode "action=verifyproxycontract" \
-      --data-urlencode "address=$proxy" \
-      --data-urlencode "expectedimplementation=$implementation" \
-      --data-urlencode "apikey=$ETHERSCAN_API_KEY_RESOLVED"
-  )"
+  local -a curl_args=(
+    --request POST
+    --url "$ETHERSCAN_API_BASE_URL"
+    --data-urlencode "module=contract"
+    --data-urlencode "action=verifyproxycontract"
+    --data-urlencode "address=$proxy"
+    --data-urlencode "expectedimplementation=$implementation"
+    --data-urlencode "apikey=$ETHERSCAN_API_KEY_RESOLVED"
+  )
+
+  if [[ "$USE_CHAIN_ID_PARAM" == "1" ]]; then
+    curl_args+=(--data-urlencode "chainid=$CHAIN_ID")
+  fi
+
+  output="$(curl -s "${curl_args[@]}")"
 
   local status message result
   status="$(jq -r '.status // ""' <<< "$output")"
@@ -179,9 +204,20 @@ poll_verify_proxy() {
 
   for ((i = 1; i <= POLL_ATTEMPTS; i++)); do
     local output status result
-    output="$(
-      curl -s "https://api.etherscan.io/v2/api?chainid=$CHAIN_ID&module=contract&action=checkproxyverification&guid=$guid&apikey=$ETHERSCAN_API_KEY_RESOLVED"
-    )"
+    local -a curl_args=(
+      -G
+      "$ETHERSCAN_API_BASE_URL"
+      --data-urlencode "module=contract"
+      --data-urlencode "action=checkproxyverification"
+      --data-urlencode "guid=$guid"
+      --data-urlencode "apikey=$ETHERSCAN_API_KEY_RESOLVED"
+    )
+
+    if [[ "$USE_CHAIN_ID_PARAM" == "1" ]]; then
+      curl_args+=(--data-urlencode "chainid=$CHAIN_ID")
+    fi
+
+    output="$(curl -s "${curl_args[@]}")"
     status="$(jq -r '.status // ""' <<< "$output")"
     result="$(jq -r '.result // ""' <<< "$output")"
 
@@ -216,22 +252,41 @@ check_proxy_flag() {
   fi
 
   local output proxy_flag impl
-  output="$(
-    curl -s "https://api.etherscan.io/v2/api?chainid=$CHAIN_ID&module=contract&action=getsourcecode&address=$proxy&apikey=$ETHERSCAN_API_KEY_RESOLVED"
-  )"
+  local -a curl_args=(
+    -G
+    "$ETHERSCAN_API_BASE_URL"
+    --data-urlencode "module=contract"
+    --data-urlencode "action=getsourcecode"
+    --data-urlencode "address=$proxy"
+    --data-urlencode "apikey=$ETHERSCAN_API_KEY_RESOLVED"
+  )
+
+  if [[ "$USE_CHAIN_ID_PARAM" == "1" ]]; then
+    curl_args+=(--data-urlencode "chainid=$CHAIN_ID")
+  fi
+
+  output="$(curl -s "${curl_args[@]}")"
   proxy_flag="$(jq -r '.result[0].Proxy // ""' <<< "$output")"
   impl="$(jq -r '.result[0].Implementation // ""' <<< "$output")"
   echo "    Proxy flag: $proxy_flag  Implementation: $impl"
 }
 
 if [[ -z "$CHAIN_ID" ]]; then
-  CHAIN_ID="$(resolve_chain_id "$CHAIN")"
+  CHAIN_ID="$(resolve_chain_id "$TARGET_CHAIN")"
 fi
 
 if [[ -z "$CHAIN_ID" ]]; then
-  echo "CHAIN_ID is missing and CHAIN='$CHAIN' is not recognized." >&2
+  echo "CHAIN_ID is missing and CHAIN='$TARGET_CHAIN' is not recognized." >&2
   exit 1
 fi
+
+# Avoid leaking CHAIN env var into cast/forge argument parsing on non-standard names (e.g. hemi).
+unset CHAIN || true
+
+if [[ -z "$ETHERSCAN_API_BASE_URL" ]]; then
+  ETHERSCAN_API_BASE_URL="$(resolve_api_base "$CHAIN_ID")"
+fi
+USE_CHAIN_ID_PARAM="$(requires_chainid_param "$CHAIN_ID")"
 
 if [[ -z "$FACTORY_PROXY" ]] && [[ -f "$BROADCAST_FILE" ]]; then
   FACTORY_PROXY="$(
@@ -281,10 +336,11 @@ for p in "${proxies[@]}"; do
 done
 
 echo "Etherscan proxy verification summary"
-echo "  CHAIN: $CHAIN"
+echo "  CHAIN: $TARGET_CHAIN"
 echo "  CHAIN_ID: $CHAIN_ID"
 echo "  RPC_URL: $RPC_URL"
 echo "  FACTORY_PROXY: $FACTORY_PROXY"
+echo "  EXPLORER_API: $ETHERSCAN_API_BASE_URL"
 echo "  PROXY_COUNT: ${#unique_proxies[@]}"
 
 for proxy in "${unique_proxies[@]}"; do

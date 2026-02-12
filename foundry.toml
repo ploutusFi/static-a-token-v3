@@ -22,6 +22,7 @@ zkevm = "${RPC_ZKEVM}"
 gnosis = "${RPC_GNOSIS}"
 bnb = "${RPC_BNB}"
 scroll="${RPC_SCROLL}"
+hemi = "${RPC_HEMI}"
 
 [etherscan]
 mainnet = { key="${ETHERSCAN_API_KEY_MAINNET}", chain=1 }
@@ -36,5 +37,6 @@ zkevm = { key="${ETHERSCAN_API_KEY_ZKEVM}", chainId=1101 }
 gnosis = { key="${ETHERSCAN_API_KEY_GNOSIS}", chainId=100 }
 bnb= { key="${ETHERSCAN_API_KEY_BNB}",chainId=56,url='https://api.bscscan.com/api'}
 scroll = {key="${ETHERSCAN_API_KEY_SCROLL}", chainId=534352}
+hemi = { key="${ETHERSCAN_API_KEY_HEMI}", chainId=43111, url='https://explorer.hemi.xyz/api' }
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config
