@@ -13,10 +13,13 @@ build  :; forge build --sizes
 test   :; forge test -vvv
 
 # Deploy
-deploy-ledger :; forge script ${contract} --rpc-url ${chain} $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --ledger --mnemonic-indexes ${MNEMONIC_INDEX} --sender ${LEDGER_SENDER} --verify ${FORGE_VERBOSITY} --slow)
-deploy-pk :; forge script ${contract} --rpc-url ${chain} $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
-deploy-ploutos-mainnet :; forge script scripts/Deploy.s.sol:DeployMainnet --rpc-url mainnet $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
-deploy-ploutos-mainnet-upgrade :; forge script scripts/DeployUpgrade.s.sol:DeployMainnet --rpc-url mainnet $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
+deploy-ledger :; forge script ${contract} --rpc-url ${chain} --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --ledger --mnemonic-indexes ${MNEMONIC_INDEX} --sender ${LEDGER_SENDER} --verify ${FORGE_VERBOSITY} --slow)
+deploy-pk :; forge script ${contract} --rpc-url ${chain} --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
+deploy-ploutos-mainnet :; forge script scripts/Deploy.s.sol:DeployMainnet --rpc-url mainnet --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
+deploy-ploutos-mainnet-upgrade :; forge script scripts/DeployUpgrade.s.sol:DeployMainnet --rpc-url mainnet --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
+verify-ploutos-mainnet-dry-run :; bash scripts/verify-ploutos-mainnet.sh --dry-run
+verify-ploutos-mainnet :; bash scripts/verify-ploutos-mainnet.sh
+deploy-ploutos-mainnet-auto-verify :; $(MAKE) deploy-ploutos-mainnet && $(MAKE) verify-ploutos-mainnet
 
 # Utilities
 download :; cast etherscan-source --chain ${chain} -d src/etherscan/${chain}_${address} ${address}

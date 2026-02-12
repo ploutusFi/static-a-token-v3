@@ -79,28 +79,32 @@ The deployment script `scripts/Deploy.s.sol:DeployMainnet` performs:
 Dry-run (no broadcast):
 
 ```sh
-make deploy-pk contract=scripts/Deploy.s.sol:DeployMainnet chain=mainnet dry=1
+make deploy-ploutos-mainnet dry=1
 ```
 
-Broadcast + verify:
+Broadcast deploy (`forge script --verify`):
 
 ```sh
-make deploy-pk contract=scripts/Deploy.s.sol:DeployMainnet chain=mainnet
+make deploy-ploutos-mainnet
 ```
 
-### Manual Verification (Proxy-Created Contracts)
-
-If auto-verify misses contracts created by `TransparentProxyFactory`, verify manually:
+Automatic verification for all proxy-created contracts (`ProxyAdmin`, factory proxy, all static token proxies):
 
 ```sh
-forge verify-contract <PROXY_ADMIN> \
-  solidity-utils/contracts/transparent-proxy/ProxyAdmin.sol:ProxyAdmin \
-  --chain mainnet --etherscan-api-key $ETHERSCAN_API_KEY_MAINNET
+make verify-ploutos-mainnet
+```
 
-forge verify-contract <FACTORY_PROXY> \
-  solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy \
-  --constructor-args $(cast abi-encode "constructor(address,address,bytes)" <FACTORY_IMPL> <PROXY_ADMIN> 0x8129fc1c) \
-  --chain mainnet --etherscan-api-key $ETHERSCAN_API_KEY_MAINNET
+One-shot deploy + full auto verification:
+
+```sh
+make deploy-ploutos-mainnet-auto-verify
+```
+
+NPM alternatives:
+
+```sh
+npm run verify:ploutos:mainnet
+npm run deploy:ploutos:mainnet:auto-verify
 ```
 
 ### Ploutos Ethereum Mainnet Upgrade Payload
