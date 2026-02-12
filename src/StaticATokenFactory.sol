@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-import {IPool, DataTypes} from 'aave-address-book/AaveV3.sol';
+import {IPool} from 'aave-v3-core/contracts/interfaces/IPool.sol';
+import {DataTypes} from 'aave-v3-core/contracts/protocol/libraries/types/DataTypes.sol';
 import {IERC20Metadata} from 'solidity-utils/contracts/oz-common/interfaces/IERC20Metadata.sol';
 import {ITransparentProxyFactory} from 'solidity-utils/contracts/transparent-proxy/interfaces/ITransparentProxyFactory.sol';
 import {Initializable} from 'solidity-utils/contracts/transparent-proxy/Initializable.sol';

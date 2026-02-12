@@ -59,3 +59,54 @@ forge install
 ```sh
 forge test
 ```
+
+### Ploutos Ethereum Mainnet Deployment
+
+`scripts/config/PloutosMainnetConfig.sol` is the source of truth for on-chain config:
+
+- `POOL`: `0x7398e7e3603119D9241E45f688734436Fd7B1540`
+- `INCENTIVES_CONTROLLER`: `0xFEa311150ebc0913B1473545156e7B372d6F6107`
+- `PROXY_ADMIN_OWNER`: `0xfb33205d32ca482a4d428c23181a9665d4ec02cc`
+
+The deployment script `scripts/Deploy.s.sol:DeployMainnet` performs:
+
+1. Deploy `TransparentProxyFactory`
+2. Create `ProxyAdmin` with `PROXY_ADMIN_OWNER`
+3. Deploy `StaticATokenLM` implementation
+4. Deploy `StaticATokenFactory` implementation + proxy
+5. Create staticATokens for `POOL.getReservesList()`
+
+Dry-run (no broadcast):
+
+```sh
+make deploy-pk contract=scripts/Deploy.s.sol:DeployMainnet chain=mainnet dry=1
+```
+
+Broadcast + verify:
+
+```sh
+make deploy-pk contract=scripts/Deploy.s.sol:DeployMainnet chain=mainnet
+```
+
+### Manual Verification (Proxy-Created Contracts)
+
+If auto-verify misses contracts created by `TransparentProxyFactory`, verify manually:
+
+```sh
+forge verify-contract <PROXY_ADMIN> \
+  solidity-utils/contracts/transparent-proxy/ProxyAdmin.sol:ProxyAdmin \
+  --chain mainnet --etherscan-api-key $ETHERSCAN_API_KEY_MAINNET
+
+forge verify-contract <FACTORY_PROXY> \
+  solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy \
+  --constructor-args $(cast abi-encode "constructor(address,address,bytes)" <FACTORY_IMPL> <PROXY_ADMIN> 0x8129fc1c) \
+  --chain mainnet --etherscan-api-key $ETHERSCAN_API_KEY_MAINNET
+```
+
+### Ploutos Ethereum Mainnet Upgrade Payload
+
+For upgrade payload deployment, set `PLOUTOS_STATIC_A_TOKEN_FACTORY` in `.env`, then run:
+
+```sh
+make deploy-pk contract=scripts/DeployUpgrade.s.sol:DeployMainnet chain=mainnet
+```
