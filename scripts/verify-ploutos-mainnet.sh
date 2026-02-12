@@ -7,9 +7,36 @@ BROADCAST_FILE="${BROADCAST_FILE:-broadcast/Deploy.s.sol/1/run-latest.json}"
 OPTIMIZER_RUNS="${OPTIMIZER_RUNS:-1}"
 DRY_RUN=0
 
+load_dotenv() {
+  local env_file="$1"
+  [[ -f "$env_file" ]] || return 0
+
+  while IFS= read -r raw || [[ -n "$raw" ]]; do
+    raw="${raw%$'\r'}"
+    [[ -z "$raw" ]] && continue
+    [[ "${raw:0:1}" == "#" ]] && continue
+    [[ "$raw" != *=* ]] && continue
+
+    if [[ "${raw:0:7}" == "export " ]]; then
+      raw="${raw:7}"
+    fi
+
+    local key="${raw%%=*}"
+    local value="${raw#*=}"
+
+    key="${key#"${key%%[![:space:]]*}"}"
+    key="${key%"${key##*[![:space:]]}"}"
+    [[ -z "$key" ]] && continue
+
+    export "$key=$value"
+  done < "$env_file"
+}
+
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_RUN=1
 fi
+
+load_dotenv ".env"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -25,6 +52,12 @@ require_cmd forge
 if [[ ! -f "$BROADCAST_FILE" ]]; then
   echo "Broadcast file not found: $BROADCAST_FILE" >&2
   echo "Run deployment with --broadcast first." >&2
+  exit 1
+fi
+
+if (( ! DRY_RUN )) && [[ -z "${ETHERSCAN_API_KEY_MAINNET:-}" && -z "${ETHERSCAN_API_KEY:-}" ]]; then
+  echo "ETHERSCAN_API_KEY_MAINNET (or ETHERSCAN_API_KEY) is missing." >&2
+  echo "Set it in .env or environment before verification." >&2
   exit 1
 fi
 
