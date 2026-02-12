@@ -8,7 +8,9 @@
     "test": "test"
   },
   "scripts": {
-    "lint": "prettier . --write"
+    "lint": "prettier . --write",
+    "deploy:ploutos:mainnet:dry-run": "forge script scripts/Deploy.s.sol:DeployMainnet --rpc-url mainnet --sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 -v --optimizer-runs 1",
+    "deploy:ploutos:mainnet": "forge script scripts/Deploy.s.sol:DeployMainnet --rpc-url mainnet --broadcast --private-key $PRIVATE_KEY --verify -v --slow --optimizer-runs 1"
   },
   "repository": {
     "type": "git",
