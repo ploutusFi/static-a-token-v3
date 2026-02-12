@@ -1,0 +1,8 @@
+{
+  "lib/aave-helpers": {
+    "rev": "1daafea0e7f7baafa82d2b386e284e3850abf048"
+  },
+  "lib/forge-std": {
+    "rev": "c22437a63d1c3418869bc35a7c55a5175a09b701"
+  }
+}
