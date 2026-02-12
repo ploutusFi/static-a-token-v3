@@ -6,7 +6,10 @@ RPC_URL="${RPC_URL:-mainnet}"
 FACTORY_PROXY="${FACTORY_PROXY:-${PLOUTOS_STATIC_A_TOKEN_FACTORY:-}}"
 BROADCAST_FILE="${BROADCAST_FILE:-broadcast/Deploy.s.sol/1/run-latest.json}"
 OPTIMIZER_RUNS="${OPTIMIZER_RUNS:-1}"
+COMPILER_VERSION="${COMPILER_VERSION:-}"
 DRY_RUN=0
+
+PROXY_CONTRACT_ID="lib/aave-helpers/lib/solidity-utils/src/contracts/transparent-proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy"
 
 # EIP-1967 slots:
 # bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1)
@@ -56,6 +59,18 @@ require_cmd cast
 require_cmd forge
 require_cmd jq
 
+if [[ -z "$COMPILER_VERSION" ]] && [[ -f out/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json ]]; then
+  COMPILER_VERSION="$(
+    jq -r '.metadata.compiler.version // .compiler.version // empty' out/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json
+  )"
+fi
+
+if [[ -z "$COMPILER_VERSION" ]]; then
+  echo "COMPILER_VERSION is missing and could not be auto-detected from artifacts." >&2
+  echo "Run forge build or set COMPILER_VERSION explicitly." >&2
+  exit 1
+fi
+
 if [[ -z "$FACTORY_PROXY" ]] && [[ -f "$BROADCAST_FILE" ]]; then
   FACTORY_PROXY="$(
     jq -er '[.transactions[] | select(.function == "create(address,address,bytes)") | .additionalContracts[0].address] | last' "$BROADCAST_FILE" 2>/dev/null || true
@@ -100,11 +115,12 @@ verify_proxy() {
   local cmd=(
     forge verify-contract
     "$proxy"
-    "solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy"
+    "$PROXY_CONTRACT_ID"
     --constructor-args "$constructor_args"
     --chain "$CHAIN"
     --rpc-url "$RPC_URL"
     --verifier etherscan
+    --compiler-version "$COMPILER_VERSION"
     --num-of-optimizations "$OPTIMIZER_RUNS"
     --skip-is-verified-check
     --watch
@@ -163,6 +179,7 @@ echo "  RPC_URL: $RPC_URL"
 echo "  FACTORY_PROXY: $FACTORY_PROXY"
 echo "  STATIC_A_TOKEN_IMPL (from proxy slot): $STATIC_A_TOKEN_IMPL"
 echo "  PROXY_ADMIN (from proxy slot): $PROXY_ADMIN"
+echo "  COMPILER_VERSION: $COMPILER_VERSION"
 echo "  STATA_PROXY_COUNT: ${#STATA_PROXIES[@]}"
 
 for proxy in "${STATA_PROXIES[@]}"; do

@@ -5,7 +5,14 @@ CHAIN="${CHAIN:-mainnet}"
 RPC_URL="${RPC_URL:-mainnet}"
 BROADCAST_FILE="${BROADCAST_FILE:-broadcast/Deploy.s.sol/1/run-latest.json}"
 OPTIMIZER_RUNS="${OPTIMIZER_RUNS:-1}"
+COMPILER_VERSION="${COMPILER_VERSION:-}"
 DRY_RUN=0
+
+TRANSPARENT_PROXY_FACTORY_CONTRACT_ID="lib/aave-helpers/lib/solidity-utils/src/contracts/transparent-proxy/TransparentProxyFactory.sol:TransparentProxyFactory"
+PROXY_ADMIN_CONTRACT_ID="lib/aave-helpers/lib/solidity-utils/src/contracts/transparent-proxy/ProxyAdmin.sol:ProxyAdmin"
+STATIC_A_TOKEN_IMPL_CONTRACT_ID="src/StaticATokenLM.sol:StaticATokenLM"
+STATIC_A_TOKEN_FACTORY_IMPL_CONTRACT_ID="src/StaticATokenFactory.sol:StaticATokenFactory"
+TRANSPARENT_UPGRADEABLE_PROXY_CONTRACT_ID="lib/aave-helpers/lib/solidity-utils/src/contracts/transparent-proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy"
 
 load_dotenv() {
   local env_file="$1"
@@ -48,6 +55,24 @@ require_cmd() {
 require_cmd jq
 require_cmd cast
 require_cmd forge
+
+if [[ -z "$COMPILER_VERSION" ]] && [[ -f out/StaticATokenLM.sol/StaticATokenLM.json ]]; then
+  COMPILER_VERSION="$(
+    jq -r '.metadata.compiler.version // .compiler.version // empty' out/StaticATokenLM.sol/StaticATokenLM.json
+  )"
+fi
+
+if [[ -z "$COMPILER_VERSION" ]] && [[ -f out/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json ]]; then
+  COMPILER_VERSION="$(
+    jq -r '.metadata.compiler.version // .compiler.version // empty' out/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json
+  )"
+fi
+
+if [[ -z "$COMPILER_VERSION" ]]; then
+  echo "COMPILER_VERSION is missing and could not be auto-detected from artifacts." >&2
+  echo "Run forge build or set COMPILER_VERSION explicitly." >&2
+  exit 1
+fi
 
 if [[ ! -f "$BROADCAST_FILE" ]]; then
   echo "Broadcast file not found: $BROADCAST_FILE" >&2
@@ -99,6 +124,7 @@ verify_contract() {
     --chain "$CHAIN"
     --rpc-url "$RPC_URL"
     --verifier etherscan
+    --compiler-version "$COMPILER_VERSION"
     --num-of-optimizations "$OPTIMIZER_RUNS"
     --watch
   )
@@ -146,6 +172,7 @@ echo "  PROXY_ADMIN: $PROXY_ADMIN"
 echo "  STATIC_A_TOKEN_IMPL: $STATIC_A_TOKEN_IMPL"
 echo "  STATIC_A_TOKEN_FACTORY_IMPL: $STATIC_A_TOKEN_FACTORY_IMPL"
 echo "  STATIC_A_TOKEN_FACTORY_PROXY: $STATIC_A_TOKEN_FACTORY_PROXY"
+echo "  COMPILER_VERSION: $COMPILER_VERSION"
 echo "  STATIC_A_TOKEN_PROXY_COUNT: ${#STATIC_A_TOKEN_PROXIES[@]}"
 
 require_deployed_code "$STATIC_A_TOKEN_IMPL" "STATIC_A_TOKEN_IMPL"
@@ -160,11 +187,11 @@ FACTORY_IMPL_CTOR="$(cast abi-encode "constructor(address,address,address,addres
 FACTORY_PROXY_CTOR="$(cast abi-encode "constructor(address,address,bytes)" "$STATIC_A_TOKEN_FACTORY_IMPL" "$PROXY_ADMIN" 0x8129fc1c)"
 
 echo "Verifying core contracts..."
-verify_contract "$TRANSPARENT_PROXY_FACTORY" "solidity-utils/contracts/transparent-proxy/TransparentProxyFactory.sol:TransparentProxyFactory"
-verify_contract "$PROXY_ADMIN" "solidity-utils/contracts/transparent-proxy/ProxyAdmin.sol:ProxyAdmin"
-verify_contract "$STATIC_A_TOKEN_IMPL" "src/StaticATokenLM.sol:StaticATokenLM" "$STATIC_IMPL_CTOR"
-verify_contract "$STATIC_A_TOKEN_FACTORY_IMPL" "src/StaticATokenFactory.sol:StaticATokenFactory" "$FACTORY_IMPL_CTOR"
-verify_contract "$STATIC_A_TOKEN_FACTORY_PROXY" "solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy" "$FACTORY_PROXY_CTOR"
+verify_contract "$TRANSPARENT_PROXY_FACTORY" "$TRANSPARENT_PROXY_FACTORY_CONTRACT_ID"
+verify_contract "$PROXY_ADMIN" "$PROXY_ADMIN_CONTRACT_ID"
+verify_contract "$STATIC_A_TOKEN_IMPL" "$STATIC_A_TOKEN_IMPL_CONTRACT_ID" "$STATIC_IMPL_CTOR"
+verify_contract "$STATIC_A_TOKEN_FACTORY_IMPL" "$STATIC_A_TOKEN_FACTORY_IMPL_CONTRACT_ID" "$FACTORY_IMPL_CTOR"
+verify_contract "$STATIC_A_TOKEN_FACTORY_PROXY" "$TRANSPARENT_UPGRADEABLE_PROXY_CONTRACT_ID" "$FACTORY_PROXY_CTOR"
 
 echo "Verifying static token proxies..."
 for proxy in "${STATIC_A_TOKEN_PROXIES[@]}"; do
@@ -176,7 +203,7 @@ for proxy in "${STATIC_A_TOKEN_PROXIES[@]}"; do
   proxy_ctor="$(cast abi-encode "constructor(address,address,bytes)" "$STATIC_A_TOKEN_IMPL" "$PROXY_ADMIN" "$init_data")"
 
   echo "  proxy: $proxy  symbol: $token_symbol  aToken: $a_token"
-  verify_contract "$proxy" "solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy" "$proxy_ctor"
+  verify_contract "$proxy" "$TRANSPARENT_UPGRADEABLE_PROXY_CONTRACT_ID" "$proxy_ctor"
 done
 
 echo "Automatic verification flow finished."
