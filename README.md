@@ -107,10 +107,47 @@ npm run verify:ploutos:mainnet
 npm run deploy:ploutos:mainnet:auto-verify
 ```
 
+If some static token proxies appear as `Similar Match`, run targeted re-verification:
+
+```sh
+make reverify-ploutos-mainnet-stata-proxies
+npm run reverify:ploutos:mainnet:stata-proxies
+```
+
 ### Ploutos Ethereum Mainnet Upgrade Payload
 
 For upgrade payload deployment, set `PLOUTOS_STATIC_A_TOKEN_FACTORY` in `.env`, then run:
 
 ```sh
 make deploy-pk contract=scripts/DeployUpgrade.s.sol:DeployMainnet chain=mainnet
+```
+
+# Ploutos Deployments
+## Mainnet
+```
+  createStaticATokens completed
+    Total staticATokens in factory 5
+    underlying 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+    underlying symbol WETH
+    staticAToken 0x29a50bfa7e3F1043D0dE40E03C60289FD8aC26Bd
+    underlying 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599
+    underlying symbol WBTC
+    staticAToken 0xc0F63947638b32d3B26e06Bdb161D217A8f62428
+    underlying 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+    underlying symbol USDC
+    staticAToken 0x76ED952b16e5b02629A8d40f73F9364134030270
+    underlying 0xdAC17F958D2ee523a2206206994597C13D831ec7
+    underlying symbol USDT
+    staticAToken 0x070313a96f757f449f49a90aA38cdDe8AaD64711
+    underlying 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3
+    underlying symbol USDe
+    staticAToken 0x63524D3d71341f74875835eFd72447541cCE833c
+  Ploutos Ethereum Mainnet deployment completed
+  TRANSPARENT_PROXY_FACTORY 0x636B19cC688b1e670AFd71B0da83fc32DC77D483 +
+  PROXY_ADMIN 0x92dE4BFcAe819E0a8F9d3C22D1daD5cE09114e7C +
+  STATIC_A_TOKEN_IMPL 0x92ba74a2b130a7267e3B4e7b11b0E8b6884b56fD
+  STATIC_A_TOKEN_FACTORY_IMPL 0xb65cbcfC429eaFd08A77df9f0279E312531B72cb
+  STATIC_A_TOKEN_FACTORY_PROXY 0x6bdb25661623596552d2EF0A76892E700B2243a9
+  STATIC_A_TOKEN_FACTORY_PROXY_IMPL 0xb65cbcfC429eaFd08A77df9f0279E312531B72cb
+  STATIC_A_TOKEN_COUNT 5
 ```

@@ -13,6 +13,8 @@
     "deploy:ploutos:mainnet": "bash scripts/deploy-ploutos-mainnet.sh broadcast",
     "verify:ploutos:mainnet:dry-run": "bash scripts/verify-ploutos-mainnet.sh --dry-run",
     "verify:ploutos:mainnet": "bash scripts/verify-ploutos-mainnet.sh",
+    "reverify:ploutos:mainnet:stata-proxies:dry-run": "bash scripts/reverify-stata-proxies-mainnet.sh --dry-run",
+    "reverify:ploutos:mainnet:stata-proxies": "bash scripts/reverify-stata-proxies-mainnet.sh",
     "deploy:ploutos:mainnet:auto-verify": "npm run deploy:ploutos:mainnet && npm run verify:ploutos:mainnet"
   },
   "repository": {
