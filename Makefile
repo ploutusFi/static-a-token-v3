@@ -16,7 +16,7 @@ test   :; forge test -vvv
 deploy-ledger :; forge script ${contract} --rpc-url ${chain} --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --ledger --mnemonic-indexes ${MNEMONIC_INDEX} --sender ${LEDGER_SENDER} --verify ${FORGE_VERBOSITY} --slow)
 deploy-pk :; forge script ${contract} --rpc-url ${chain} --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
 deploy-ploutos-mainnet :; forge script scripts/Deploy.s.sol:DeployMainnet --rpc-url mainnet --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
-deploy-ploutos-hemi :; forge script scripts/Deploy.s.sol:DeployHemi --rpc-url hemi --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
+deploy-ploutos-hemi :; forge script scripts/Deploy.s.sol:DeployHemi --rpc-url hemi --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify --verifier custom --verifier-url https://explorer.hemi.xyz/api --verifier-api-key $${ETHERSCAN_API_KEY_HEMI:-abc} ${FORGE_VERBOSITY} --slow)
 deploy-ploutos-mainnet-upgrade :; forge script scripts/DeployUpgrade.s.sol:DeployMainnet --rpc-url mainnet --optimizer-runs 1 $(if ${dry},--sender 0x25F2226B597E8F9514B3F68F00f494cF4f286491 ${FORGE_VERBOSITY},--broadcast --private-key ${PRIVATE_KEY} --verify ${FORGE_VERBOSITY} --slow)
 verify-ploutos-mainnet-dry-run :; bash scripts/verify-ploutos-mainnet.sh --dry-run
 verify-ploutos-mainnet :; bash scripts/verify-ploutos-mainnet.sh
@@ -24,8 +24,8 @@ verify-ploutos-hemi-dry-run :; bash scripts/verify-ploutos-hemi.sh --dry-run
 verify-ploutos-hemi :; bash scripts/verify-ploutos-hemi.sh
 verify-ploutos-mainnet-proxy-tabs-dry-run :; CHAIN=mainnet CHAIN_ID=1 bash scripts/etherscan-verify-proxies.sh --dry-run
 verify-ploutos-mainnet-proxy-tabs :; CHAIN=mainnet CHAIN_ID=1 bash scripts/etherscan-verify-proxies.sh
-verify-ploutos-hemi-proxy-tabs-dry-run :; CHAIN=hemi CHAIN_ID=43111 RPC_URL=hemi bash scripts/etherscan-verify-proxies.sh --dry-run
-verify-ploutos-hemi-proxy-tabs :; CHAIN=hemi CHAIN_ID=43111 RPC_URL=hemi bash scripts/etherscan-verify-proxies.sh
+verify-ploutos-hemi-proxy-tabs-dry-run :; BROADCAST_FILE=broadcast/Deploy.s.sol/43111/run-latest.json CHAIN=hemi CHAIN_ID=43111 RPC_URL=hemi bash scripts/etherscan-verify-proxies.sh --dry-run
+verify-ploutos-hemi-proxy-tabs :; BROADCAST_FILE=broadcast/Deploy.s.sol/43111/run-latest.json CHAIN=hemi CHAIN_ID=43111 RPC_URL=hemi bash scripts/etherscan-verify-proxies.sh
 reverify-ploutos-mainnet-stata-proxies-dry-run :; bash scripts/reverify-stata-proxies-mainnet.sh --dry-run
 reverify-ploutos-mainnet-stata-proxies :; bash scripts/reverify-stata-proxies-mainnet.sh
 reverify-ploutos-hemi-stata-proxies-dry-run :; bash scripts/reverify-stata-proxies-hemi.sh --dry-run

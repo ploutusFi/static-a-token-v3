@@ -7,6 +7,9 @@ FACTORY_PROXY="${FACTORY_PROXY:-${PLOUTOS_STATIC_A_TOKEN_FACTORY:-}}"
 BROADCAST_FILE="${BROADCAST_FILE:-broadcast/Deploy.s.sol/1/run-latest.json}"
 OPTIMIZER_RUNS="${OPTIMIZER_RUNS:-1}"
 COMPILER_VERSION="${COMPILER_VERSION:-}"
+VERIFIER="${VERIFIER:-etherscan}"
+VERIFIER_URL="${VERIFIER_URL:-}"
+VERIFIER_API_KEY="${VERIFIER_API_KEY:-}"
 DRY_RUN=0
 
 PROXY_CONTRACT_ID="lib/aave-helpers/lib/solidity-utils/src/contracts/transparent-proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy"
@@ -84,10 +87,28 @@ if [[ -z "$FACTORY_PROXY" ]]; then
   exit 1
 fi
 
-if (( ! DRY_RUN )) && [[ -z "${ETHERSCAN_API_KEY_MAINNET:-}" && -z "${ETHERSCAN_API_KEY:-}" ]]; then
-  echo "ETHERSCAN_API_KEY_MAINNET (or ETHERSCAN_API_KEY) is missing." >&2
-  echo "Set it in .env or environment before re-verification." >&2
-  exit 1
+if (( ! DRY_RUN )); then
+  if [[ "$VERIFIER" == "custom" ]]; then
+    if [[ -z "$VERIFIER_URL" ]]; then
+      echo "VERIFIER_URL is missing for custom verifier." >&2
+      exit 1
+    fi
+    if [[ -z "$VERIFIER_API_KEY" ]]; then
+      if [[ -n "${ETHERSCAN_API_KEY_MAINNET:-}" ]]; then
+        VERIFIER_API_KEY="${ETHERSCAN_API_KEY_MAINNET}"
+      elif [[ -n "${ETHERSCAN_API_KEY:-}" ]]; then
+        VERIFIER_API_KEY="${ETHERSCAN_API_KEY}"
+      fi
+    fi
+    if [[ -z "$VERIFIER_API_KEY" ]]; then
+      echo "VERIFIER_API_KEY is missing for custom verifier." >&2
+      exit 1
+    fi
+  elif [[ -z "${ETHERSCAN_API_KEY_MAINNET:-}" && -z "${ETHERSCAN_API_KEY:-}" ]]; then
+    echo "ETHERSCAN_API_KEY_MAINNET (or ETHERSCAN_API_KEY) is missing." >&2
+    echo "Set it in .env or environment before re-verification." >&2
+    exit 1
+  fi
 fi
 
 run_or_echo() {
@@ -119,12 +140,20 @@ verify_proxy() {
     --constructor-args "$constructor_args"
     --chain "$CHAIN"
     --rpc-url "$RPC_URL"
-    --verifier etherscan
+    --verifier "$VERIFIER"
     --compiler-version "$COMPILER_VERSION"
     --num-of-optimizations "$OPTIMIZER_RUNS"
     --skip-is-verified-check
     --watch
   )
+
+  if [[ -n "$VERIFIER_URL" ]]; then
+    cmd+=(--verifier-url "$VERIFIER_URL")
+  fi
+
+  if [[ -n "$VERIFIER_API_KEY" ]]; then
+    cmd+=(--verifier-api-key "$VERIFIER_API_KEY")
+  fi
 
   if ((DRY_RUN)); then
     run_or_echo "${cmd[@]}"
@@ -157,6 +186,24 @@ require_deployed_code() {
   fi
 }
 
+is_deployed_code() {
+  local address="$1"
+  local code
+  code="$(cast code "$address" --rpc-url "$RPC_URL" 2>/dev/null || true)"
+  [[ "$code" != "0x" && -n "$code" ]]
+}
+
+if ! is_deployed_code "$FACTORY_PROXY" && [[ -f "$BROADCAST_FILE" ]]; then
+  fallback_factory_proxy="$(
+    jq -er '[.transactions[] | select(.function == "create(address,address,bytes)") | .additionalContracts[0].address] | last' "$BROADCAST_FILE" 2>/dev/null || true
+  )"
+  if [[ -n "$fallback_factory_proxy" ]] && is_deployed_code "$fallback_factory_proxy"; then
+    echo "FACTORY_PROXY is not deployed on $CHAIN: $FACTORY_PROXY" >&2
+    echo "Falling back to factory from BROADCAST_FILE: $fallback_factory_proxy" >&2
+    FACTORY_PROXY="$fallback_factory_proxy"
+  fi
+fi
+
 require_deployed_code "$FACTORY_PROXY" "FACTORY_PROXY"
 
 mapfile -t STATA_PROXIES < <(
@@ -180,6 +227,10 @@ echo "  FACTORY_PROXY: $FACTORY_PROXY"
 echo "  STATIC_A_TOKEN_IMPL (from proxy slot): $STATIC_A_TOKEN_IMPL"
 echo "  PROXY_ADMIN (from proxy slot): $PROXY_ADMIN"
 echo "  COMPILER_VERSION: $COMPILER_VERSION"
+echo "  VERIFIER: $VERIFIER"
+if [[ -n "$VERIFIER_URL" ]]; then
+  echo "  VERIFIER_URL: $VERIFIER_URL"
+fi
 echo "  STATA_PROXY_COUNT: ${#STATA_PROXIES[@]}"
 
 for proxy in "${STATA_PROXIES[@]}"; do

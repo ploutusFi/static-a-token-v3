@@ -30,11 +30,34 @@ load_dotenv() {
 
 load_dotenv ".env"
 
+ensure_etherscan_keys_defaults() {
+  local keys=(
+    ETHERSCAN_API_KEY_MAINNET
+    ETHERSCAN_API_KEY_OPTIMISM
+    ETHERSCAN_API_KEY_AVALANCHE
+    ETHERSCAN_API_KEY_POLYGON
+    ETHERSCAN_API_KEY_ARBITRUM
+    ETHERSCAN_API_KEY_FANTOM
+    ETHERSCAN_API_KEY_BASE
+    ETHERSCAN_API_KEY_ZKEVM
+    ETHERSCAN_API_KEY_GNOSIS
+    ETHERSCAN_API_KEY_BNB
+    ETHERSCAN_API_KEY_SCROLL
+  )
+
+  for key in "${keys[@]}"; do
+    if [[ -z "${!key:-}" ]]; then
+      export "$key=abc"
+    fi
+  done
+}
+
+ensure_etherscan_keys_defaults
+
 if [[ -z "${ETHERSCAN_API_KEY_HEMI:-}" ]]; then
   if [[ -n "${ETHERSCAN_API_KEY:-}" ]]; then
     export ETHERSCAN_API_KEY_HEMI="$ETHERSCAN_API_KEY"
   else
-    # Hemi explorer accepts placeholder-like keys in etherscan-compatible flows.
     export ETHERSCAN_API_KEY_HEMI="abc"
   fi
 fi
@@ -60,6 +83,9 @@ forge script scripts/Deploy.s.sol:DeployHemi \
   --broadcast \
   --private-key "$PRIVATE_KEY" \
   --verify \
+  --verifier custom \
+  --verifier-url https://explorer.hemi.xyz/api \
+  --verifier-api-key "$ETHERSCAN_API_KEY_HEMI" \
   -v \
   --slow \
   --optimizer-runs 1

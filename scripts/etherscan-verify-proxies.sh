@@ -143,6 +143,13 @@ require_deployed_code() {
   fi
 }
 
+is_deployed_code() {
+  local address="$1"
+  local code
+  code="$(cast code "$address" --rpc-url "$RPC_URL" 2>/dev/null || true)"
+  [[ "$code" != "0x" && -n "$code" ]]
+}
+
 submit_verify_proxy() {
   local proxy="$1"
   local implementation="$2"
@@ -298,6 +305,17 @@ if [[ -z "$FACTORY_PROXY" ]]; then
   echo "FACTORY_PROXY is missing." >&2
   echo "Set FACTORY_PROXY/PLOUTOS_STATIC_A_TOKEN_FACTORY or provide BROADCAST_FILE." >&2
   exit 1
+fi
+
+if ! is_deployed_code "$FACTORY_PROXY" && [[ -f "$BROADCAST_FILE" ]]; then
+  fallback_factory_proxy="$(
+    jq -er '[.transactions[] | select(.function == "create(address,address,bytes)") | .additionalContracts[0].address] | last' "$BROADCAST_FILE" 2>/dev/null || true
+  )"
+  if [[ -n "$fallback_factory_proxy" ]] && is_deployed_code "$fallback_factory_proxy"; then
+    echo "FACTORY_PROXY is not deployed on CHAIN_ID=$CHAIN_ID: $FACTORY_PROXY" >&2
+    echo "Falling back to factory from BROADCAST_FILE: $fallback_factory_proxy" >&2
+    FACTORY_PROXY="$fallback_factory_proxy"
+  fi
 fi
 
 ETHERSCAN_API_KEY_RESOLVED="$(resolve_api_key "$CHAIN_ID")"

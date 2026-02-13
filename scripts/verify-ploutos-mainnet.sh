@@ -6,6 +6,9 @@ RPC_URL="${RPC_URL:-mainnet}"
 BROADCAST_FILE="${BROADCAST_FILE:-broadcast/Deploy.s.sol/1/run-latest.json}"
 OPTIMIZER_RUNS="${OPTIMIZER_RUNS:-1}"
 COMPILER_VERSION="${COMPILER_VERSION:-}"
+VERIFIER="${VERIFIER:-etherscan}"
+VERIFIER_URL="${VERIFIER_URL:-}"
+VERIFIER_API_KEY="${VERIFIER_API_KEY:-}"
 DRY_RUN=0
 
 TRANSPARENT_PROXY_FACTORY_CONTRACT_ID="lib/aave-helpers/lib/solidity-utils/src/contracts/transparent-proxy/TransparentProxyFactory.sol:TransparentProxyFactory"
@@ -80,10 +83,28 @@ if [[ ! -f "$BROADCAST_FILE" ]]; then
   exit 1
 fi
 
-if (( ! DRY_RUN )) && [[ -z "${ETHERSCAN_API_KEY_MAINNET:-}" && -z "${ETHERSCAN_API_KEY:-}" ]]; then
-  echo "ETHERSCAN_API_KEY_MAINNET (or ETHERSCAN_API_KEY) is missing." >&2
-  echo "Set it in .env or environment before verification." >&2
-  exit 1
+if (( ! DRY_RUN )); then
+  if [[ "$VERIFIER" == "custom" ]]; then
+    if [[ -z "$VERIFIER_URL" ]]; then
+      echo "VERIFIER_URL is missing for custom verifier." >&2
+      exit 1
+    fi
+    if [[ -z "$VERIFIER_API_KEY" ]]; then
+      if [[ -n "${ETHERSCAN_API_KEY_MAINNET:-}" ]]; then
+        VERIFIER_API_KEY="${ETHERSCAN_API_KEY_MAINNET}"
+      elif [[ -n "${ETHERSCAN_API_KEY:-}" ]]; then
+        VERIFIER_API_KEY="${ETHERSCAN_API_KEY}"
+      fi
+    fi
+    if [[ -z "$VERIFIER_API_KEY" ]]; then
+      echo "VERIFIER_API_KEY is missing for custom verifier." >&2
+      exit 1
+    fi
+  elif [[ -z "${ETHERSCAN_API_KEY_MAINNET:-}" && -z "${ETHERSCAN_API_KEY:-}" ]]; then
+    echo "ETHERSCAN_API_KEY_MAINNET (or ETHERSCAN_API_KEY) is missing." >&2
+    echo "Set it in .env or environment before verification." >&2
+    exit 1
+  fi
 fi
 
 json_last() {
@@ -123,11 +144,19 @@ verify_contract() {
     "$contract_id"
     --chain "$CHAIN"
     --rpc-url "$RPC_URL"
-    --verifier etherscan
+    --verifier "$VERIFIER"
     --compiler-version "$COMPILER_VERSION"
     --num-of-optimizations "$OPTIMIZER_RUNS"
     --watch
   )
+
+  if [[ -n "$VERIFIER_URL" ]]; then
+    cmd+=(--verifier-url "$VERIFIER_URL")
+  fi
+
+  if [[ -n "$VERIFIER_API_KEY" ]]; then
+    cmd+=(--verifier-api-key "$VERIFIER_API_KEY")
+  fi
 
   if [[ -n "$constructor_args" ]]; then
     cmd+=(--constructor-args "$constructor_args")
@@ -173,6 +202,10 @@ echo "  STATIC_A_TOKEN_IMPL: $STATIC_A_TOKEN_IMPL"
 echo "  STATIC_A_TOKEN_FACTORY_IMPL: $STATIC_A_TOKEN_FACTORY_IMPL"
 echo "  STATIC_A_TOKEN_FACTORY_PROXY: $STATIC_A_TOKEN_FACTORY_PROXY"
 echo "  COMPILER_VERSION: $COMPILER_VERSION"
+echo "  VERIFIER: $VERIFIER"
+if [[ -n "$VERIFIER_URL" ]]; then
+  echo "  VERIFIER_URL: $VERIFIER_URL"
+fi
 echo "  STATIC_A_TOKEN_PROXY_COUNT: ${#STATIC_A_TOKEN_PROXIES[@]}"
 
 require_deployed_code "$STATIC_A_TOKEN_IMPL" "STATIC_A_TOKEN_IMPL"

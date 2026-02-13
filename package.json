@@ -22,8 +22,8 @@
     "deploy:ploutos:hemi": "bash scripts/deploy-ploutos-hemi.sh broadcast",
     "verify:ploutos:hemi:dry-run": "bash scripts/verify-ploutos-hemi.sh --dry-run",
     "verify:ploutos:hemi": "bash scripts/verify-ploutos-hemi.sh",
-    "verify:ploutos:hemi:proxy-tabs:dry-run": "CHAIN=hemi CHAIN_ID=43111 RPC_URL=hemi bash scripts/etherscan-verify-proxies.sh --dry-run",
-    "verify:ploutos:hemi:proxy-tabs": "CHAIN=hemi CHAIN_ID=43111 RPC_URL=hemi bash scripts/etherscan-verify-proxies.sh",
+    "verify:ploutos:hemi:proxy-tabs:dry-run": "BROADCAST_FILE=broadcast/Deploy.s.sol/43111/run-latest.json CHAIN=hemi CHAIN_ID=43111 RPC_URL=hemi bash scripts/etherscan-verify-proxies.sh --dry-run",
+    "verify:ploutos:hemi:proxy-tabs": "BROADCAST_FILE=broadcast/Deploy.s.sol/43111/run-latest.json CHAIN=hemi CHAIN_ID=43111 RPC_URL=hemi bash scripts/etherscan-verify-proxies.sh",
     "reverify:ploutos:hemi:stata-proxies:dry-run": "bash scripts/reverify-stata-proxies-hemi.sh --dry-run",
     "reverify:ploutos:hemi:stata-proxies": "bash scripts/reverify-stata-proxies-hemi.sh",
     "deploy:ploutos:hemi:auto-verify": "npm run deploy:ploutos:hemi && npm run verify:ploutos:hemi && npm run verify:ploutos:hemi:proxy-tabs"
